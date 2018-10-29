@@ -1,5 +1,17 @@
 use std::collections::LinkedList;
 
+fn num_of_bits(input: &u32) -> u32 {
+    let mut copy: u32 = input.clone();
+    let mut bits: u32 = 0;
+
+    while copy != 0 {
+        copy = copy >> 1;
+        bits += 1;
+    }
+
+    bits
+}
+
 pub trait HashTable {
     fn get(&mut self, key: u32) -> Option<String>;
     fn load_factor(&self) -> f64;
@@ -64,6 +76,7 @@ pub enum HashType {
 }
 
 impl HashTable for OAHashTable {
+    /// Hash table with Open Adressing to handle collisions 
 
     fn new(capacity: u32, hash_type: HashType) -> Self {
         OAHashTable { capacity: capacity, size: 0, collisions: 0, entries: vec![HashEntry::Null; capacity as usize], hash_type: hash_type }
@@ -93,9 +106,13 @@ impl HashTable for OAHashTable {
         match &self.hash_type {
             HashType::MidSquare => {
                 let mut hash: u32 = key*key;
-                hash /= 100;
-                hash %= 10;
-                hash % self.capacity
+
+                let max: f64 = ((self.capacity*self.capacity*9) as f64).log2().ceil();
+                let table: f64 = ((self.capacity) as f64).log2().ceil();
+                let diff: u32 = (max - table) as u32;
+                hash = hash / ((diff/2).pow(2));
+                hash = hash % self.capacity;
+                return hash;
             },
             HashType::KeyModTableSize => {
                 key % self.capacity
@@ -157,6 +174,7 @@ pub struct SCHashTable {
 }
 
 impl HashTable for SCHashTable {
+    /// Hash Table with Seperate Chaining for collisions
 
     fn new(capacity: u32, hash_type: HashType) -> Self {
         SCHashTable { capacity: capacity, size: 0, collisions: 0, entries: vec![LinkedList::new(); capacity as usize], hash_type: hash_type }
@@ -178,9 +196,13 @@ impl HashTable for SCHashTable {
         match &self.hash_type {
             HashType::MidSquare => {
                 let mut hash: u32 = key*key;
-                hash /= 100;
-                hash %= 10;
-                hash % self.capacity
+
+                let max: f64 = ((self.capacity*self.capacity*9) as f64).log2().ceil();
+                let table: f64 = ((self.capacity) as f64).log2().ceil();
+                let diff: u32 = (max - table) as u32;
+                hash = hash / ((diff/2).pow(2));
+                hash = hash % self.capacity;
+                return hash;
             },
             HashType::KeyModTableSize => {
                 key % self.capacity
@@ -201,7 +223,7 @@ impl HashTable for SCHashTable {
 
         let entry_list = &mut self.entries[hash as usize];
         if !entry_list.is_empty() {
-            self.collisions += 1;
+            self.collisions += entry_list.len() as u32;
         }
         entry_list.push_back((key, value));
 
